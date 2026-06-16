@@ -8,12 +8,10 @@ const errorMessage = document.getElementById('error-message');
 const cityName = document.getElementById('city-name');
 const forecastContainer = document.getElementById('forecast-container');
 
-// 1. Lancer la recherche pour Pau par défaut au chargement de la page
 window.addEventListener('DOMContentLoaded', () => {
     getWeather('Pau');
 });
 
-// Événements pour le bouton et la touche "Entrée"
 searchBtn.addEventListener('click', () => {
     const city = cityInput.value.trim();
     if (city !== "") getWeather(city);
@@ -27,7 +25,6 @@ cityInput.addEventListener('keypress', (event) => {
 });
 
 async function getWeather(city) {
-    // Attention : on utilise l'endpoint "forecast" au lieu de "weather"
     const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric&lang=fr`;
 
     try {
@@ -38,39 +35,62 @@ async function getWeather(city) {
         if (!response.ok) throw new Error('Une erreur s\'est produite.');
         
         const data = await response.json();
-        
-        // Afficher le nom de la ville
         cityName.textContent = data.city.name;
-        
-        // Vider la grille avant d'ajouter les nouveaux jours
         forecastContainer.innerHTML = ''; 
 
-        // Filtrer pour ne garder qu'une prévision par jour (celle de 12:00:00)
-        const dailyForecasts = data.list.filter(item => item.dt_txt.includes('12:00:00'));
+        // 1. Organiser les données jour par jour
+        const dailyData = {};
+        
+        data.list.forEach(item => {
+            // Extrait la date (ex: "2026-06-16") de "2026-06-16 15:00:00"
+            const date = item.dt_txt.split(' ')[0]; 
+            
+            if (!dailyData[date]) {
+                dailyData[date] = [];
+            }
+            dailyData[date].push(item);
+        });
 
-        // Créer une carte pour chaque jour récupéré
-        dailyForecasts.forEach(day => {
-            // Transformer la date (ex: "2026-06-17 12:00:00") en nom de jour (ex: "mer.")
-            const date = new Date(day.dt_txt);
-            const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+        // 2. Prendre uniquement les 5 premiers jours
+        const days = Object.keys(dailyData).slice(0, 5);
 
-            const temp = Math.round(day.main.temp);
-            const iconCode = day.weather[0].icon;
+        // 3. Calculer le maximum pour chaque jour
+        days.forEach(dateString => {
+            const forecastsForDay = dailyData[dateString];
+            
+            let maxTemp = -Infinity; // On commence par la température la plus basse possible
+            let iconCode = '';
 
-            // Construire le HTML de la petite carte
+            forecastsForDay.forEach(forecast => {
+                // Si la température de cette tranche horaire est plus haute que notre max actuel
+                if (forecast.main.temp_max > maxTemp) {
+                    maxTemp = forecast.main.temp_max;
+                    // On garde l'icône associée au moment le plus chaud de la journée
+                    iconCode = forecast.weather[0].icon; 
+                }
+            });
+
+            // Formatage de la date pour l'affichage
+            const dateObj = new Date(dateString);
+            const dayName = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' });
+
+            // Création de la carte HTML
             const card = document.createElement('div');
             card.className = 'day-card';
+            
+            // On remplace le "n" (nuit) par "d" (jour/day) dans le code de l'icône 
+            // pour éviter d'afficher une lune si le moment le plus chaud est à 18h en hiver
+            const dayIconCode = iconCode.replace('n', 'd');
+
             card.innerHTML = `
                 <div class="day-name">${dayName}</div>
-                <img class="day-icon" src="https://openweathermap.org/img/wn/${iconCode}@2x.png" alt="icone">
-                <div class="day-temp">${temp}°C</div>
+                <img class="day-icon" src="https://openweathermap.org/img/wn/${dayIconCode}@2x.png" alt="icone">
+                <div class="day-temp">${Math.round(maxTemp)}°C</div>
             `;
             
-            // Ajouter la carte dans le conteneur
             forecastContainer.appendChild(card);
         });
 
-        // Afficher les résultats
         weatherResult.classList.remove('hidden');
         errorMessage.classList.add('hidden');
         
