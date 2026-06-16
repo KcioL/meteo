@@ -1,14 +1,25 @@
 // Remplace cette clé par la tienne récupérée sur OpenWeatherMap
 const apiKey = '47c727b5e192b4fc5c837bc25007c07e'; 
 
+// Le dictionnaire qui traduit le code de l'API en Émoji
+const weatherEmojis = {
+    '01d': '☀️', '01n': '🌙',       // Ciel clair (jour/nuit)
+    '02d': '🌤️', '02n': '🌤️',       // Quelques nuages
+    '03d': '☁️', '03n': '☁️',       // Nuageux
+    '04d': '🌥️', '04n': '🌥️',       // Très nuageux
+    '09d': '🌧️', '09n': '🌧️',       // Averses
+    '10d': '🌦️', '10n': '🌧️',       // Pluie (avec soleil de jour)
+    '11d': '⛈️', '11n': '⛈️',       // Orage
+    '13d': '❄️', '13n': '❄️',       // Neige
+    '50d': '🌫️', '50n': '🌫️'       // Brouillard
+};
+
 const searchBtn = document.getElementById('search-btn');
 const cityInput = document.getElementById('city-input');
 const weatherResult = document.getElementById('weather-result');
 const errorMessage = document.getElementById('error-message');
 const cityName = document.getElementById('city-name');
 const forecastContainer = document.getElementById('forecast-container');
-
-// Nouveaux éléments du DOM
 const hourlyResult = document.getElementById('hourly-result');
 const hourlyContainer = document.getElementById('hourly-container');
 const hourlyTitle = document.getElementById('hourly-title');
@@ -41,7 +52,7 @@ async function getWeather(city) {
         const data = await response.json();
         cityName.textContent = data.city.name;
         forecastContainer.innerHTML = ''; 
-        hourlyResult.classList.add('hidden'); // On cache les détails si on cherche une nouvelle ville
+        hourlyResult.classList.add('hidden'); 
 
         const dailyData = {};
         
@@ -68,28 +79,27 @@ async function getWeather(city) {
 
             const dateObj = new Date(dateString);
             const dayShort = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' });
-            // Version longue du jour pour le titre des détails (ex: "lundi")
             const dayLong = dateObj.toLocaleDateString('fr-FR', { weekday: 'long' });
 
             const card = document.createElement('div');
             card.className = 'day-card';
+            
+            // On force le mode jour pour l'affichage de la carte principale
             const dayIconCode = iconCode.replace('n', 'd');
+            
+            // On récupère l'émoji correspondant, ou un soleil par défaut si le code est inconnu
+            const emoji = weatherEmojis[dayIconCode] || '☀️';
 
+            // Injection du HTML avec le div contenant l'émoji
             card.innerHTML = `
                 <div class="day-name">${dayShort}</div>
-                <img class="day-icon" src="https://openweathermap.org/img/wn/${dayIconCode}@2x.png" alt="icone">
+                <div class="emoji-icon">${emoji}</div>
                 <div class="day-temp">${Math.round(maxTemp)}°C</div>
             `;
             
-            // --- GESTION DU CLIC SUR LA CARTE ---
             card.addEventListener('click', () => {
-                // 1. Enlever l'effet "sélectionné" de toutes les cartes
                 document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
-                
-                // 2. Mettre en surbrillance la carte cliquée
                 card.classList.add('active');
-                
-                // 3. Afficher le détail des heures pour ce jour
                 showHourlyForecast(forecastsForDay, dayLong);
             });
 
@@ -106,28 +116,30 @@ async function getWeather(city) {
     }
 }
 
-// --- FONCTION QUI GÉNÈRE LES DÉTAILS PAR HEURE ---
 function showHourlyForecast(forecasts, dayName) {
-    hourlyContainer.innerHTML = ''; // On vide les anciens résultats
+    hourlyContainer.innerHTML = ''; 
     hourlyTitle.textContent = `Prévisions pour ${dayName}`;
 
     forecasts.forEach(forecast => {
-        // Extrait l'heure (ex: "15:00") à partir de "2026-06-16 15:00:00"
         const time = forecast.dt_txt.split(' ')[1].substring(0, 5);
         const temp = Math.round(forecast.main.temp);
         const icon = forecast.weather[0].icon;
+        
+        // Ici on laisse l'icône originale (jour ou nuit) car c'est heure par heure
+        const emoji = weatherEmojis[icon] || '☀️';
 
         const hourlyCard = document.createElement('div');
         hourlyCard.className = 'hourly-card';
+        
+        // Injection de la version "petite" de l'émoji
         hourlyCard.innerHTML = `
             <div class="hourly-time">${time}</div>
-            <img class="hourly-icon" src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icone">
+            <div class="emoji-icon-small">${emoji}</div>
             <div class="hourly-temp">${temp}°C</div>
         `;
         
         hourlyContainer.appendChild(hourlyCard);
     });
 
-    // On fait apparaître la section en dessous
     hourlyResult.classList.remove('hidden');
 }
