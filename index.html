@@ -8,21 +8,21 @@
 </head>
 <body>
     <div class="weather-card">
-        <h1>Météo</h1>
+        <h1>Météo sur 5 jours</h1>
         <div class="search-box">
-            <input type="text" id="city-input" placeholder="Ex: Pau">
+            <input type="text" id="city-input" placeholder="Ex: Toulouse">
             <button id="search-btn">Chercher</button>
         </div>
         
+        <!-- Zone de résultat -->
         <div id="weather-result" class="hidden">
             <h2 id="city-name">--</h2>
-            <div class="temp-container">
-                <span id="temperature">--</span><span class="unit">°C</span>
-            </div>
-            <p id="description" class="desc">--</p>
-            <img id="weather-icon" src="" alt="Icône météo">
+            
+            <!-- C'est ici que le JavaScript va injecter les jours -->
+            <div id="forecast-container" class="forecast-grid"></div>
         </div>
 
+        <!-- Message d'erreur -->
         <p id="error-message" class="hidden error">Ville introuvable. Réessaie.</p>
     </div>
 
