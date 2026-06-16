@@ -8,6 +8,11 @@ const errorMessage = document.getElementById('error-message');
 const cityName = document.getElementById('city-name');
 const forecastContainer = document.getElementById('forecast-container');
 
+// Nouveaux éléments du DOM
+const hourlyResult = document.getElementById('hourly-result');
+const hourlyContainer = document.getElementById('hourly-container');
+const hourlyTitle = document.getElementById('hourly-title');
+
 window.addEventListener('DOMContentLoaded', () => {
     getWeather('Pau');
 });
@@ -29,7 +34,6 @@ async function getWeather(city) {
 
     try {
         const response = await fetch(url);
-        
         if (response.status === 401) throw new Error('Clé API non valide ou en cours d\'activation.');
         if (response.status === 404) throw new Error('Ville introuvable. Vérifie l\'orthographe.');
         if (!response.ok) throw new Error('Une erreur s\'est produite.');
@@ -37,57 +41,58 @@ async function getWeather(city) {
         const data = await response.json();
         cityName.textContent = data.city.name;
         forecastContainer.innerHTML = ''; 
+        hourlyResult.classList.add('hidden'); // On cache les détails si on cherche une nouvelle ville
 
-        // 1. Organiser les données jour par jour
         const dailyData = {};
         
         data.list.forEach(item => {
-            // Extrait la date (ex: "2026-06-16") de "2026-06-16 15:00:00"
             const date = item.dt_txt.split(' ')[0]; 
-            
-            if (!dailyData[date]) {
-                dailyData[date] = [];
-            }
+            if (!dailyData[date]) dailyData[date] = [];
             dailyData[date].push(item);
         });
 
-        // 2. Prendre uniquement les 5 premiers jours
         const days = Object.keys(dailyData).slice(0, 5);
 
-        // 3. Calculer le maximum pour chaque jour
         days.forEach(dateString => {
             const forecastsForDay = dailyData[dateString];
             
-            let maxTemp = -Infinity; // On commence par la température la plus basse possible
+            let maxTemp = -Infinity;
             let iconCode = '';
 
             forecastsForDay.forEach(forecast => {
-                // Si la température de cette tranche horaire est plus haute que notre max actuel
                 if (forecast.main.temp_max > maxTemp) {
                     maxTemp = forecast.main.temp_max;
-                    // On garde l'icône associée au moment le plus chaud de la journée
                     iconCode = forecast.weather[0].icon; 
                 }
             });
 
-            // Formatage de la date pour l'affichage
             const dateObj = new Date(dateString);
-            const dayName = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' });
+            const dayShort = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' });
+            // Version longue du jour pour le titre des détails (ex: "lundi")
+            const dayLong = dateObj.toLocaleDateString('fr-FR', { weekday: 'long' });
 
-            // Création de la carte HTML
             const card = document.createElement('div');
             card.className = 'day-card';
-            
-            // On remplace le "n" (nuit) par "d" (jour/day) dans le code de l'icône 
-            // pour éviter d'afficher une lune si le moment le plus chaud est à 18h en hiver
             const dayIconCode = iconCode.replace('n', 'd');
 
             card.innerHTML = `
-                <div class="day-name">${dayName}</div>
+                <div class="day-name">${dayShort}</div>
                 <img class="day-icon" src="https://openweathermap.org/img/wn/${dayIconCode}@2x.png" alt="icone">
                 <div class="day-temp">${Math.round(maxTemp)}°C</div>
             `;
             
+            // --- GESTION DU CLIC SUR LA CARTE ---
+            card.addEventListener('click', () => {
+                // 1. Enlever l'effet "sélectionné" de toutes les cartes
+                document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
+                
+                // 2. Mettre en surbrillance la carte cliquée
+                card.classList.add('active');
+                
+                // 3. Afficher le détail des heures pour ce jour
+                showHourlyForecast(forecastsForDay, dayLong);
+            });
+
             forecastContainer.appendChild(card);
         });
 
@@ -99,4 +104,30 @@ async function getWeather(city) {
         errorMessage.textContent = error.message;
         errorMessage.classList.remove('hidden');
     }
+}
+
+// --- FONCTION QUI GÉNÈRE LES DÉTAILS PAR HEURE ---
+function showHourlyForecast(forecasts, dayName) {
+    hourlyContainer.innerHTML = ''; // On vide les anciens résultats
+    hourlyTitle.textContent = `Prévisions pour ${dayName}`;
+
+    forecasts.forEach(forecast => {
+        // Extrait l'heure (ex: "15:00") à partir de "2026-06-16 15:00:00"
+        const time = forecast.dt_txt.split(' ')[1].substring(0, 5);
+        const temp = Math.round(forecast.main.temp);
+        const icon = forecast.weather[0].icon;
+
+        const hourlyCard = document.createElement('div');
+        hourlyCard.className = 'hourly-card';
+        hourlyCard.innerHTML = `
+            <div class="hourly-time">${time}</div>
+            <img class="hourly-icon" src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icone">
+            <div class="hourly-temp">${temp}°C</div>
+        `;
+        
+        hourlyContainer.appendChild(hourlyCard);
+    });
+
+    // On fait apparaître la section en dessous
+    hourlyResult.classList.remove('hidden');
 }
