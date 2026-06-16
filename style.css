@@ -128,9 +128,18 @@ button:hover {
     margin-bottom: 5px;
 }
 
-.day-icon {
-    width: 80px;
-    height: 80px;
+/* Taille de l'émoji pour les 5 jours */
+.emoji-icon {
+    font-size: 4rem; /* Règle la taille de l'émoji ici */
+    margin: 10px 0;
+    line-height: 1; /* Évite que l'émoji prenne trop de place en hauteur */
+}
+
+/* Taille de l'émoji pour les détails par heure */
+.emoji-icon-small {
+    font-size: 2.5rem;
+    margin: 5px 0;
+    line-height: 1;
 }
 
 .day-temp {
@@ -202,11 +211,6 @@ button:hover {
     font-size: 0.9rem;
     color: #a0a0a0;
     margin-bottom: 5px;
-}
-
-.hourly-icon {
-    width: 45px;
-    height: 45px;
 }
 
 .hourly-temp {
